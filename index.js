@@ -26,6 +26,7 @@ const app = express();
 // MongoDB connection function
 const connectDatabase = async () => {
   const mongoURI = process.env.DB_URL || "";
+console.log("DB_URL:", process.env.DB_URL);
 
   if (!mongoURI.startsWith("mongodb://") && !mongoURI.startsWith("mongodb+srv://")) {
     console.error("❌ Invalid MongoDB URI. It must start with 'mongodb://' or 'mongodb+srv://'");
