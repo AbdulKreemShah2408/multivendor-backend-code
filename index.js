@@ -1,12 +1,13 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const serverless = require("serverless-http");
 
 const ErrorHandler = require("./middleware/error");
-const connectDatabase = require("./db/Database");
 
+// Controllers
 const user = require("./controller/user");
 const shop = require("./controller/shop");
 const product = require("./controller/product");
@@ -17,13 +18,33 @@ const order = require("./controller/order");
 const conversation = require("./controller/conversation");
 const message = require("./controller/message");
 
-// Load env
+// Load env variables
 require("dotenv").config();
-
 
 const app = express();
 
-// Connect DB
+// MongoDB connection function
+const connectDatabase = async () => {
+  const mongoURI = process.env.DB_URL || "";
+
+  if (!mongoURI.startsWith("mongodb://") && !mongoURI.startsWith("mongodb+srv://")) {
+    console.error("❌ Invalid MongoDB URI. It must start with 'mongodb://' or 'mongodb+srv://'");
+    process.exit(1);
+  }
+
+  try {
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("✅ MongoDB connected successfully.");
+  } catch (error) {
+    console.error("❌ Error connecting to MongoDB:", error.message);
+    process.exit(1);
+  }
+};
+
+// Connect to DB before starting the app
 connectDatabase();
 
 // Middlewares
@@ -57,8 +78,8 @@ app.get("/", (req, res) => {
   });
 });
 
-// Error handler
+// Error handler middleware
 app.use(ErrorHandler);
 
-// ✅ ONLY EXPORT THIS (VERY IMPORTANT)
+// Export serverless handler
 module.exports = serverless(app);
