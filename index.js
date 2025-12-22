@@ -74,16 +74,21 @@ app.get("/", async (req, res) => {
 app.use(ErrorHandler);
 
 /* ================= SERVERLESS HANDLER ================= */
+/* ================= SERVERLESS HANDLER ================= */
 const handler = serverless(app);
 
 module.exports = async (req, res) => {
   try {
-    if (!isConnected) {
-      await connectDatabase();
-    }
-    return handler(req, res);
+    // Database connection check
+    await connectDatabase();
+    
+    // SERVERLESS-HTTP KO AWAIT KARNA ZAROORI HAI
+    return await handler(req, res);
   } catch (error) {
     console.error("Error in serverless handler:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
+    // Response send karein taaki loading ruk jaye
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: "Internal Server Error" });
+    }
   }
 };
