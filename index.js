@@ -42,12 +42,19 @@ const connectDatabase = async () => {
     console.error("❌ MongoDB connection error:", error);
   }
 };
-
+const allowedOrigins = [
+  "https://multivendor-fronted.vercel.app", 
+  "http://localhost:5173" 
+];
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors({ origin: true, credentials: true }));
+
 
 
 app.use(async (req, res, next) => {
@@ -74,6 +81,16 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use((err, req, res, next) => {
+  console.error("Caught Error:", err);
+  const statusCode = Number(err.statusCode) || 500;
+  const message = err.message || "Internal Server Error";
+  return res.status(statusCode).json({
+    success: false,
+    statusCode,
+    message,
+  });
+});
 app.use(ErrorHandler);
 
 
