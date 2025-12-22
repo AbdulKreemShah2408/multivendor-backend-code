@@ -33,9 +33,14 @@ const connectDatabase = async () => {
     throw new Error("DB_URL is missing in environment variables");
   }
 
-  await mongoose.connect(mongoURI);
-  isConnected = true;
-  console.log("✅ MongoDB connected");
+  try {
+    await mongoose.connect(mongoURI);
+    isConnected = true;
+    console.log("✅ MongoDB connected");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    throw error;  // Rethrow so handler can catch and respond properly
+  }
 };
 
 /* ================= MIDDLEWARE ================= */
@@ -55,16 +60,29 @@ app.use("/api/v2/order", order);
 app.use("/api/v2/conversation", conversation);
 app.use("/api/v2/message", message);
 
-/* ================= TEST ================= */
+/* ================= TEST ROUTE ================= */
 app.get("/", async (req, res) => {
-  await connectDatabase();
-  res.json({ success: true, message: "Backend running on Vercel" });
+  try {
+    await connectDatabase();
+    res.json({ success: true, message: "Backend running on Vercel" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "DB Connection failed" });
+  }
 });
 
 app.use(ErrorHandler);
 
-/* ================= EXPORT ================= */
-module.exports = serverless(async (req, res) => {
-  await connectDatabase();
-  return app(req, res);
-});
+/* ================= SERVERLESS HANDLER ================= */
+const handler = serverless(app);
+
+module.exports = async (req, res) => {
+  try {
+    if (!isConnected) {
+      await connectDatabase();
+    }
+    return handler(req, res);
+  } catch (error) {
+    console.error("Error in serverless handler:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+};
