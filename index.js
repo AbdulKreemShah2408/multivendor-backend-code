@@ -51,7 +51,10 @@ app.use("/api/v2/message", message);
 
 // Test route
 app.get("/", (req, res) => {
-  res.send("✅ Multivendor backend is running on Vercel");
+  res.status(200).json({
+    success: true,
+    message: "✅ Multivendor backend is running on Vercel",
+  });
 });
 
 // Error handler
