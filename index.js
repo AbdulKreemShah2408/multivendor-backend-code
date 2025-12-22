@@ -3,12 +3,11 @@ const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const serverless = require("serverless-http");
 
 const ErrorHandler = require("./middleware/error");
 require('dotenv').config();
 
-// Controllers
+
 const user = require("./controller/user");
 const shop = require("./controller/shop");
 const product = require("./controller/product");
@@ -21,36 +20,42 @@ const message = require("./controller/message");
 
 const app = express();
 
-/* ================= DB CONNECTION (SAFE FOR VERCEL) ================= */
+
 let isConnected = false;
 
 const connectDatabase = async () => {
   if (isConnected) return;
 
-  const mongoURI = process.env.DB_URL;
-  console.log("DB_URL =>", mongoURI ? "FOUND" : "MISSING");
-
-  if (!mongoURI) {
-    throw new Error("DB_URL is missing in environment variables");
-  }
-
   try {
-    await mongoose.connect(mongoURI);
+    const mongoURI = process.env.DB_URL;
+    if (!mongoURI) throw new Error("DB_URL missing");
+
+
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    
     isConnected = true;
     console.log("✅ MongoDB connected");
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);
-    throw error;  // Rethrow so handler can catch and respond properly
   }
 };
 
-/* ================= MIDDLEWARE ================= */
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
 
-/* ================= ROUTES ================= */
+
+app.use(async (req, res, next) => {
+  await connectDatabase();
+  next();
+});
+
+
 app.use("/api/v2/user", user);
 app.use("/api/v2/shop", shop);
 app.use("/api/v2/product", product);
@@ -61,34 +66,15 @@ app.use("/api/v2/order", order);
 app.use("/api/v2/conversation", conversation);
 app.use("/api/v2/message", message);
 
-/* ================= TEST ROUTE ================= */
-app.get("/", async (req, res) => {
-  try {
-    await connectDatabase();
-    res.json({ success: true, message: "Backend running on Vercel" });
-  } catch (error) {
-    res.status(500).json({ success: false, error: "DB Connection failed" });
-  }
+app.get("/", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "Backend running on Vercel",
+    dbStatus: isConnected ? "Connected" : "Disconnected"
+  });
 });
 
 app.use(ErrorHandler);
 
-/* ================= SERVERLESS HANDLER ================= */
-/* ================= SERVERLESS HANDLER ================= */
-const handler = serverless(app);
 
-module.exports = async (req, res) => {
-  try {
-    // Database connection check
-    await connectDatabase();
-    
-    // SERVERLESS-HTTP KO AWAIT KARNA ZAROORI HAI
-    return await handler(req, res);
-  } catch (error) {
-    console.error("Error in serverless handler:", error);
-    // Response send karein taaki loading ruk jaye
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, error: "Internal Server Error" });
-    }
-  }
-};
+module.exports = app;
