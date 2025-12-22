@@ -87,9 +87,3 @@ module.exports = async (req, res) => {
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 8000;
-  app.listen(PORT, () => {
-    console.log(`Server running locally on port ${PORT}`);
-  });
-}
