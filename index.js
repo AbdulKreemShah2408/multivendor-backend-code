@@ -1,13 +1,11 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
 const cors = require("cors");
-
 const ErrorHandler = require("./middleware/error");
 require('dotenv').config();
 
-
+// Controllers (Same as before)
 const user = require("./controller/user");
 const shop = require("./controller/shop");
 const product = require("./controller/product");
@@ -20,28 +18,9 @@ const message = require("./controller/message");
 
 const app = express();
 
+// --- CONFIGURATION ---
 
-let isConnected = false;
-
-const connectDatabase = async () => {
-  if (isConnected) return;
-
-  try {
-    const mongoURI = process.env.DB_URL;
-    if (!mongoURI) throw new Error("DB_URL missing");
-
-
-    await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    
-    isConnected = true;
-    console.log("✅ MongoDB connected");
-  } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-  }
-};
+// 1. CORS Configuration
 const allowedOrigins = [
   "https://multivendor-fronted.vercel.app", 
   "http://localhost:5173" 
@@ -51,20 +30,33 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
-app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
+// 2. Body Parser Limits (YE SABSE UPAR HONA CHAHIYE)
+// Note: Vercel Free plan ki hard limit 4.5MB hai, isse zyada file nahi chalegi.
+app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-
+// --- DATABASE ---
+let isConnected = false;
+const connectDatabase = async () => {
+  if (isConnected) return;
+  try {
+    const mongoURI = process.env.DB_URL;
+    if (!mongoURI) throw new Error("DB_URL missing");
+    await mongoose.connect(mongoURI);
+    isConnected = true;
+    console.log("✅ MongoDB connected");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+  }
+};
 
 app.use(async (req, res, next) => {
   await connectDatabase();
   next();
 });
 
-
+// --- ROUTES ---
 app.use("/api/v2/user", user);
 app.use("/api/v2/shop", shop);
 app.use("/api/v2/product", product);
@@ -83,17 +75,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use((err, req, res, next) => {
-  console.error("Caught Error:", err);
-  const statusCode = Number(err.statusCode) || 500;
-  const message = err.message || "Internal Server Error";
-  return res.status(statusCode).json({
-    success: false,
-    statusCode,
-    message,
-  });
-});
+// --- ERROR HANDLING ---
 app.use(ErrorHandler);
-
 
 module.exports = app;
