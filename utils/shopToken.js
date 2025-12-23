@@ -27,8 +27,8 @@ const sendShopToken = (seller, statusCode, res) => {
 
   const options = {
     httpOnly: true,
-    sameSite: "lax",
-    secure: false,
+    sameSite: "none",
+    secure: true,
     expires: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
   };
 

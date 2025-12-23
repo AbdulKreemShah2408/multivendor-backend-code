@@ -49,7 +49,7 @@ router.post("/create-shop", upload.single("file"), async (req, res, next) => {
 
         // Create activation token
         const activationToken = createActivationToken(shopData);
-        const activationUrl = `http://localhost:5173/seller/activation/${activationToken}`;
+        const activationUrl = `${process.env.FRONTEND_URL}/seller/activation/${activationToken}`;
 
         try {
           // send email
